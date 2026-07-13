@@ -48,7 +48,7 @@ Use the reusable [feature template](./docs/features/_TEMPLATE.md) for new specif
 
 ## Local development
 
-Requirements: Node.js 20.9 or newer and npm.
+Requirements: Node.js 20.19 or newer and npm.
 
 ```bash
 npm install

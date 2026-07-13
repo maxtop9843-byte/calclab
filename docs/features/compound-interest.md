@@ -415,7 +415,7 @@ The feature is complete only when:
 - [x] The multiplier is labeled as an estimated asset multiple relative to contributed principal and never as a return rate.
 - [x] Existing architecture is respected and shared components are reused where appropriate.
 - [x] Formula and validation expected values are independently derived.
-- [x] Required unit, component, accessibility, and end-to-end tests pass.
+- [x] Required unit, component, and accessibility tests pass. End-to-end tests were not added or run for this release under the approved Implementation Plan exception: add the mobile-first E2E journey only when its required test infrastructure is introduced; this release did not introduce that infrastructure.
 - [x] Mobile, desktop, keyboard, screen-reader, focus, reduced-motion, touch, zoom, table, and chart-alternative reviews pass.
 - [x] SEO content and structured data match visible content and current official guidance.
 - [x] `npm run check` passes.
