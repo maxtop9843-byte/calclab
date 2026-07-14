@@ -57,14 +57,14 @@ Status: Implemented
 
 기간 초 납입은 해당 납입 주기의 첫 시점에 넣어 한 주기 더 이자를 얻고, 기간 말 납입은 주기가 끝난 뒤 넣는다. 월 납입은 매월, 연 납입은 12개월마다 실행한다.
 
-일반과세 기본값은 15.4%다. 국세청이 안내하는 일반 이자소득 원천징수 14%와 국가법령정보센터의 지방소득세 특별징수 산식(소득세 원천징수액의 10%)을 합친 단순 추정이다. 실제 과세 여부와 세액은 가입자, 상품과 법령 적용에 따라 달라질 수 있다.
+일반과세 기본값은 15.4%다. 거주자의 일반적인 이자소득에 대해 국세청이 안내하는 소득세 원천징수세율 14%를 적용하고, 그 소득세 원천징수액의 10%를 개인지방소득세로 특별징수한다는 지방세법 산식을 반영한 값이다. 따라서 개인지방소득세는 이자소득의 1.4%(`14% × 10%`)이고, 합계 간이 세율은 `14% + 1.4% = 15.4%`다. 이 계산기는 해당 합계 세율을 세전 이자에 한 번 적용한다. 실제 과세 여부와 세액은 가입자, 금융상품, 비과세·과세특례 및 법령 적용에 따라 달라질 수 있다.
 
 계산은 Decimal.js 고정밀 값을 유지하고 표시할 때만 원 단위 반올림한다. `세전 만기액 = 납입 원금 + 세전 이자`, `세후 만기액 = 납입 원금 + 세전 이자 - 예상 세금`이 항상 일치해야 한다.
 
-Authoritative tax references:
+Authoritative tax references (verified 2026-07-14):
 
-- 국세청, 거주자 이자소득 원천징수 세율 안내: https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?cntntsId=7703&mi=2287
-- 국가법령정보센터, 지방소득세 특별징수 서식 산식: https://www.law.go.kr/flDownload.do?flNm=%5B%EB%B3%84%EC%A7%80+%EC%A0%9C49%ED%98%B8%EC%84%9C%EC%8B%9D%5D+%EC%86%8C%EB%93%9D%EC%84%B8%E3%86%8D%EB%B2%95%EC%9D%B8%EC%84%B8+%EC%9B%90%EC%B2%9C%EC%A7%95%EC%88%98+%EC%8B%A0%EA%B3%A0%E3%86%8D%EA%B2%B0%EC%A0%95%E3%86%8D%EA%B2%BD%EC%A0%95+%EB%82%B4%EC%9A%A9+%ED%86%B5%EB%B3%B4%0A&flSeq=95531099
+- [국세청, 거주자 및 내국법인 원천징수 세율 안내](https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?cntntsId=7703&mi=2287): 거주자의 그 밖의 이자소득 세율 14%
+- [국가법령정보센터, 지방세법 제103조의13](https://www.law.go.kr/LSW/lsInfoP.do?ancNo=19860&ancYd=20231229&ancYnChk=0&chrClsCd=010202&efGubun=Y&efYd=20240401&lsiSeq=257489&nwJoYnInfo=Y): 원천징수하는 소득세의 10%를 개인지방소득세로 특별징수
 
 ## Validation
 
@@ -124,7 +124,9 @@ Authoritative tax references:
 - [x] 승인 범위와 콘텐츠가 구현됨
 - [x] 계산·검증·UI 관심사가 분리됨
 - [x] 접근성, SEO와 통합 테스트가 추가됨
-- [ ] `npm run check` 통과
-- [ ] `npm run build` 통과
-- [ ] 전체 diff 검토 완료
-- [ ] 커밋, push와 Draft PR 완료
+- [x] `npm run check` 통과
+- [x] `npm run build` 통과
+- [x] 전체 diff 검토 완료
+- [x] 커밋 완료
+- [x] push 완료
+- [x] Draft PR 생성 완료
