@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { SkipLink } from "@/components/layout/skip-link";
 import {
   ThemeProvider,
   themeInitializationScript,
@@ -52,13 +54,16 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const requestHeaders = await headers();
+  const locale = requestHeaders.get("x-calcome-locale") === "en" ? "en" : "ko";
+  const pathname = requestHeaders.get("x-calcome-pathname") ?? "/";
   return (
-    <html lang="ko" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{ __html: themeInitializationScript }}
@@ -66,16 +71,11 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <ThemeProvider>
-          <a
-            href="#main-content"
-            className="sr-only z-50 rounded-md bg-background px-4 py-2 text-sm font-medium focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:ring-2 focus:ring-ring"
-          >
-            본문으로 건너뛰기
-          </a>
+          <SkipLink locale={locale} />
           <div className="flex min-h-screen flex-col">
-            <SiteHeader />
+            <SiteHeader locale={locale} pathname={pathname} />
             {children}
-            <SiteFooter />
+            <SiteFooter locale={locale} />
           </div>
         </ThemeProvider>
       </body>
