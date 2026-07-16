@@ -1,13 +1,20 @@
 "use client";
 
-import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import {
-  CalculatorActions,
   PrimaryResults,
-  calculatorSettingsClass,
-  calculatorWorkspaceClass,
+  compactCalculatorSettingsClass,
+  dashboardCalculatorWorkspaceClass,
 } from "@/components/calculators/calculator-workspace";
+import { Button } from "@/components/ui/button";
+import { AnimatedWon } from "@/features/compound-interest/components/animated-won";
 import { formatMoneyInput } from "@/lib/input/money";
 
 import { calculateDeposit } from "../calculate";
@@ -16,6 +23,7 @@ import {
   GENERAL_INTEREST_TAX_RATE,
 } from "../constants";
 import { formatDepositPercent, formatDepositWon } from "../format";
+import { getDepositDictionary, type DepositLocale } from "../i18n";
 import type {
   DepositField,
   DepositFormValues,
@@ -23,18 +31,29 @@ import type {
   DepositValidationErrors,
 } from "../types";
 import { validateDepositForm } from "../validation";
+import { DepositGrowthChart } from "./deposit-growth-chart";
 
-const INITIAL_DEPOSIT_VALUES: DepositFormValues = {
+const INITIAL_VALUES: DepositFormValues = {
   ...DEFAULT_DEPOSIT_VALUES,
   depositAmount: "",
   depositPeriod: "",
   annualInterestRate: "",
 };
-
 const controlClass =
-  "mt-2 h-11 w-full rounded-lg border bg-background px-3 text-base tabular-nums shadow-sm outline-none transition focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20";
+  "mt-1.5 h-10 w-full rounded-lg border bg-background px-3 text-sm tabular-nums shadow-sm outline-none transition placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 aria-invalid:border-destructive";
 
-type NumberFieldProps = {
+function NumberField({
+  field,
+  label,
+  value,
+  unit,
+  help,
+  error,
+  placeholder,
+  money,
+  onChange,
+  onBlur,
+}: {
   field: DepositField;
   label: string;
   value: string;
@@ -45,21 +64,7 @@ type NumberFieldProps = {
   money?: boolean;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onBlur: () => void;
-};
-
-function NumberField({
-  field,
-  label,
-  value,
-  unit,
-  help,
-  error,
-  placeholder,
-  money = false,
-  onChange,
-  onBlur,
-}: NumberFieldProps) {
-  const describedBy = `${field}-help${error ? ` ${field}-error` : ""}`;
+}) {
   return (
     <div>
       <label htmlFor={field} className="text-sm font-medium">
@@ -70,31 +75,28 @@ function NumberField({
           id={field}
           name={field}
           value={value}
+          placeholder={placeholder}
           onChange={(event) => {
             if (money)
               event.target.value = formatMoneyInput(event.target.value, value);
             onChange(event);
           }}
-          placeholder={placeholder}
           onBlur={onBlur}
           inputMode="decimal"
           autoComplete="off"
           aria-invalid={Boolean(error)}
-          aria-describedby={describedBy}
+          aria-describedby={`${field}-help${error ? ` ${field}-error` : ""}`}
           className={`${controlClass} pr-14`}
         />
-        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center pt-2 text-sm text-muted-foreground">
+        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center pt-1.5 text-sm text-muted-foreground">
           {unit}
         </span>
       </div>
-      <p
-        id={`${field}-help`}
-        className="mt-1.5 text-xs leading-5 text-muted-foreground"
-      >
+      <p id={`${field}-help`} className="sr-only">
         {help}
       </p>
       {error ? (
-        <p id={`${field}-error`} className="mt-1.5 text-sm text-destructive">
+        <p id={`${field}-error`} className="mt-1 text-sm text-destructive">
           {error}
         </p>
       ) : null}
@@ -102,22 +104,40 @@ function NumberField({
   );
 }
 
-export function DepositCalculator() {
-  const [values, setValues] = useState<DepositFormValues>(
-    INITIAL_DEPOSIT_VALUES,
-  );
+export function DepositCalculator({
+  locale = "ko",
+}: {
+  locale?: DepositLocale;
+}) {
+  const copy = getDepositDictionary(locale).calculator;
+  const [values, setValues] = useState<DepositFormValues>(INITIAL_VALUES);
   const [errors, setErrors] = useState<DepositValidationErrors>({});
   const [result, setResult] = useState<DepositResult | null>(null);
   const [appliedValues, setAppliedValues] = useState(DEFAULT_DEPOSIT_VALUES);
+  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [additionalOpen, setAdditionalOpen] = useState(false);
+  const [animationKey, setAnimationKey] = useState(0);
   const [announcement, setAnnouncement] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
+  const resultRef = useRef<HTMLElement>(null);
+  const pendingScroll = useRef(false);
+
+  useEffect(() => {
+    if (!result || !pendingScroll.current) return;
+    pendingScroll.current = false;
+    const reduced =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    resultRef.current?.scrollIntoView?.({
+      behavior: reduced ? "auto" : "smooth",
+      block: "start",
+    });
+  }, [result]);
 
   function updateValue(field: DepositField, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
   }
-
   function validateField(field: DepositField) {
-    const validation = validateDepositForm(values);
+    const validation = validateDepositForm(values, locale);
     setErrors((current) => {
       const next = { ...current };
       if (validation.errors[field]) next[field] = validation.errors[field];
@@ -125,10 +145,9 @@ export function DepositCalculator() {
       return next;
     });
   }
-
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const validation = validateDepositForm(values);
+    const validation = validateDepositForm(values, locale);
     setErrors(validation.errors);
     setAnnouncement("");
     if (!validation.data) {
@@ -139,22 +158,25 @@ export function DepositCalculator() {
       return;
     }
     const next = calculateDeposit(validation.data);
+    pendingScroll.current = true;
     setResult(next);
     setAppliedValues(values);
-    setAnnouncement(
-      `계산이 완료되었습니다. 예상 세후 만기액은 ${formatDepositWon(next.maturityAfterTax)}입니다.`,
-    );
+    setAnimationKey((current) => current + 1);
+    setDetailsOpen(true);
+    setAdditionalOpen(true);
+    setAnnouncement(copy.complete(formatDepositWon(next.maturityAfterTax)));
   }
-
   function reset() {
-    setValues(INITIAL_DEPOSIT_VALUES);
+    pendingScroll.current = false;
+    setValues(INITIAL_VALUES);
     setErrors({});
     setResult(null);
     setAppliedValues(DEFAULT_DEPOSIT_VALUES);
-    setAnnouncement("입력값과 계산 결과를 초기화했습니다.");
+    setDetailsOpen(true);
+    setAdditionalOpen(false);
+    setAnnouncement(copy.resetAnnouncement);
   }
-
-  const appliedTaxRate =
+  const taxRate =
     appliedValues.taxOption === "tax-free"
       ? "0"
       : appliedValues.taxOption === "general"
@@ -163,112 +185,116 @@ export function DepositCalculator() {
 
   return (
     <section aria-labelledby="deposit-calculator-title">
-      <div className={calculatorWorkspaceClass}>
+      <div className={dashboardCalculatorWorkspaceClass}>
         <form
           ref={formRef}
           noValidate
           onSubmit={submit}
-          className={calculatorSettingsClass}
+          className={compactCalculatorSettingsClass}
         >
-          <p className="text-sm font-semibold text-primary">입력</p>
+          <p className="text-sm font-semibold text-primary">
+            {copy.inputEyebrow}
+          </p>
           <h2
             id="deposit-calculator-title"
-            className="mt-1 text-2xl font-semibold tracking-tight"
+            className="mt-1 text-xl font-semibold"
           >
-            예금 조건 설정
+            {copy.inputTitle}
           </h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            별표(*) 항목은 필수입니다. 원금을 만기까지 한 번에 예치한다고
-            가정합니다.
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            {copy.inputDescription}
           </p>
           {Object.keys(errors).length ? (
             <div
               role="alert"
-              className="mt-5 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm"
+              className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm"
             >
-              입력값을 확인해 주세요. 첫 번째 오류 항목으로 이동했습니다.
+              {copy.errorSummary}
             </div>
           ) : null}
-          <div className="mt-6 grid gap-5 sm:grid-cols-2">
-            <div className="sm:col-span-2">
+          <div className="mt-4 grid gap-3">
+            <NumberField
+              field="depositAmount"
+              label={copy.amount}
+              value={values.depositAmount}
+              unit={copy.won}
+              help={copy.amountHelp}
+              error={errors.depositAmount}
+              placeholder={copy.amountPlaceholder}
+              money
+              onChange={(e) => updateValue("depositAmount", e.target.value)}
+              onBlur={() => validateField("depositAmount")}
+            />
+            <div className="grid grid-cols-2 gap-3">
               <NumberField
-                field="depositAmount"
-                label="예치 금액"
-                value={values.depositAmount}
-                unit="원"
-                help="만기까지 한 번에 맡길 원금"
-                error={errors.depositAmount}
-                placeholder="예: 10,000,000"
-                money
-                onChange={(e) => updateValue("depositAmount", e.target.value)}
-                onBlur={() => validateField("depositAmount")}
+                field="depositPeriod"
+                label={copy.period}
+                value={values.depositPeriod}
+                unit={values.periodUnit === "years" ? copy.years : copy.months}
+                help={copy.periodHelp}
+                error={errors.depositPeriod}
+                placeholder={copy.periodPlaceholder}
+                onChange={(e) => updateValue("depositPeriod", e.target.value)}
+                onBlur={() => validateField("depositPeriod")}
               />
+              <div>
+                <label htmlFor="periodUnit" className="text-sm font-medium">
+                  {copy.periodUnit} <span className="text-destructive">*</span>
+                </label>
+                <select
+                  id="periodUnit"
+                  value={values.periodUnit}
+                  onChange={(e) => updateValue("periodUnit", e.target.value)}
+                  className={controlClass}
+                >
+                  <option value="years">{copy.years}</option>
+                  <option value="months">{copy.months}</option>
+                </select>
+              </div>
             </div>
-            <NumberField
-              field="depositPeriod"
-              label="예치 기간"
-              value={values.depositPeriod}
-              unit={values.periodUnit === "years" ? "년" : "개월"}
-              help="최대 100년 또는 1,200개월"
-              error={errors.depositPeriod}
-              placeholder="예: 1"
-              onChange={(e) => updateValue("depositPeriod", e.target.value)}
-              onBlur={() => validateField("depositPeriod")}
-            />
-            <div>
-              <label htmlFor="periodUnit" className="text-sm font-medium">
-                기간 단위 <span className="text-destructive">*</span>
-              </label>
-              <select
-                id="periodUnit"
-                value={values.periodUnit}
-                onChange={(e) => updateValue("periodUnit", e.target.value)}
-                className={controlClass}
-              >
-                <option value="years">년</option>
-                <option value="months">개월</option>
-              </select>
-            </div>
-            <NumberField
-              field="annualInterestRate"
-              label="연 이자율"
-              value={values.annualInterestRate}
-              unit="%"
-              help="기간 동안 고정된다고 가정하는 명목 연이율"
-              error={errors.annualInterestRate}
-              placeholder="예: 3.5"
-              onChange={(e) =>
-                updateValue("annualInterestRate", e.target.value)
-              }
-              onBlur={() => validateField("annualInterestRate")}
-            />
-            <div>
-              <label htmlFor="interestMethod" className="text-sm font-medium">
-                이자 방식 <span className="text-destructive">*</span>
-              </label>
-              <select
-                id="interestMethod"
-                value={values.interestMethod}
-                onChange={(e) => updateValue("interestMethod", e.target.value)}
-                className={controlClass}
-              >
-                <option value="simple">단리</option>
-                <option value="compound">월복리</option>
-              </select>
+            <div className="grid grid-cols-2 gap-3">
+              <NumberField
+                field="annualInterestRate"
+                label={copy.rate}
+                value={values.annualInterestRate}
+                unit="%"
+                help={copy.rateHelp}
+                error={errors.annualInterestRate}
+                placeholder={copy.ratePlaceholder}
+                onChange={(e) =>
+                  updateValue("annualInterestRate", e.target.value)
+                }
+                onBlur={() => validateField("annualInterestRate")}
+              />
+              <div>
+                <label htmlFor="interestMethod" className="text-sm font-medium">
+                  {copy.method} <span className="text-destructive">*</span>
+                </label>
+                <select
+                  id="interestMethod"
+                  value={values.interestMethod}
+                  onChange={(e) =>
+                    updateValue("interestMethod", e.target.value)
+                  }
+                  className={controlClass}
+                >
+                  <option value="simple">{copy.simple}</option>
+                  <option value="compound">{copy.compound}</option>
+                </select>
+              </div>
             </div>
           </div>
-
-          <fieldset className="mt-5">
-            <legend className="text-sm font-medium">세금 옵션</legend>
-            <div className="mt-2 grid gap-2 sm:grid-cols-3">
+          <fieldset className="mt-3">
+            <legend className="text-sm font-medium">{copy.taxOption}</legend>
+            <div className="mt-1.5 grid gap-2">
               {[
-                ["general", `일반과세 ${GENERAL_INTEREST_TAX_RATE}%`],
-                ["tax-free", "비과세"],
-                ["custom", "사용자 지정"],
+                ["general", copy.general],
+                ["tax-free", copy.taxFree],
+                ["custom", copy.custom],
               ].map(([value, label]) => (
                 <label
                   key={value}
-                  className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm has-checked:border-primary has-checked:bg-primary/5"
+                  className="flex min-h-10 items-center gap-2 rounded-lg border px-3 text-sm has-checked:border-primary has-checked:bg-primary/5"
                 >
                   <input
                     type="radio"
@@ -281,106 +307,227 @@ export function DepositCalculator() {
                 </label>
               ))}
             </div>
-            <p className="mt-2 text-xs leading-5 text-muted-foreground">
-              일반과세는 소득세 14%와 개인지방소득세 1.4%를 합친 간이
-              추정입니다.
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              {copy.taxHelp}
             </p>
           </fieldset>
           {values.taxOption === "custom" ? (
-            <div className="mt-5">
+            <div className="mt-3">
               <NumberField
                 field="customTaxRate"
-                label="사용자 지정 간이 세율"
+                label={copy.customTax}
                 value={values.customTaxRate}
                 unit="%"
-                help="상품에 적용되는 세율을 직접 입력하세요."
+                help={copy.customTaxHelp}
                 error={errors.customTaxRate}
-                placeholder="예: 15.4"
+                placeholder={copy.customTaxPlaceholder}
                 onChange={(e) => updateValue("customTaxRate", e.target.value)}
                 onBlur={() => validateField("customTaxRate")}
               />
             </div>
           ) : null}
-          <CalculatorActions submitLabel="만기 결과 계산하기" onReset={reset} />
+          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+            <Button type="submit" className="h-10">
+              {copy.calculate}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10"
+              onClick={reset}
+            >
+              {copy.reset}
+            </Button>
+          </div>
         </form>
-
-        <section
-          aria-labelledby="deposit-result-title"
-          className="rounded-2xl border bg-card p-5 shadow-sm sm:p-7"
-        >
-          <p className="text-sm font-semibold text-primary">예상 결과</p>
-          <h2
-            id="deposit-result-title"
-            className="mt-1 text-2xl font-semibold tracking-tight"
+        <div className="min-w-0 space-y-4">
+          <section
+            ref={resultRef}
+            aria-labelledby="deposit-result-title"
+            className="scroll-mt-20 rounded-xl border bg-card p-4 shadow-sm"
           >
-            예상 세후 만기액
-          </h2>
-          {result ? (
-            <>
-              <PrimaryResults
-                metrics={[
-                  {
-                    label: "세후 만기액",
-                    value: formatDepositWon(result.maturityAfterTax),
-                    featured: true,
-                  },
-                  { label: "원금", value: formatDepositWon(result.principal) },
-                  {
-                    label: "세후 이자",
-                    value: formatDepositWon(result.afterTaxInterest),
-                  },
-                ]}
-              />
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                고정 조건을 가정한 추정치이며 특정 금융상품의 실제 지급액이
-                아닙니다.
-              </p>
-              <div className="mt-6 rounded-xl border bg-muted/20 p-4">
-                <h3 className="font-medium">추가 결과</h3>
-                <dl className="mt-3 grid gap-3 sm:grid-cols-3">
-                  {[
-                    ["세전 이자", result.grossInterest],
-                    ["예상 세금", result.estimatedTax],
-                    ["세전 만기액", result.maturityBeforeTax],
-                  ].map(([label, value]) => (
-                    <div
-                      key={label}
-                      className="rounded-xl border bg-background p-4"
-                    >
-                      <dt className="text-xs text-muted-foreground">{label}</dt>
-                      <dd className="mt-1 font-semibold tabular-nums">
-                        {formatDepositWon(value)}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-              <div className="mt-5 rounded-xl bg-muted p-4 text-sm leading-6">
-                <p className="font-medium">실효 수익</p>
-                <p className="mt-1 text-muted-foreground">
-                  원금 대비 세후 이자{" "}
-                  {formatDepositPercent(result.effectiveReturnRate)} · 적용 간이
-                  세율 {appliedTaxRate}%
+            <p className="text-sm font-semibold text-primary">
+              {copy.resultsEyebrow}
+            </p>
+            <h2
+              id="deposit-result-title"
+              className="mt-1 text-xl font-semibold"
+            >
+              {copy.resultsTitle}
+            </h2>
+            <PrimaryResults
+              metrics={[
+                {
+                  label: copy.maturity,
+                  value: result ? (
+                    <AnimatedWon
+                      value={result.maturityAfterTax}
+                      animationKey={animationKey}
+                    />
+                  ) : (
+                    "-"
+                  ),
+                  featured: true,
+                },
+                {
+                  label: copy.principal,
+                  value: result ? (
+                    <AnimatedWon
+                      value={result.principal}
+                      animationKey={animationKey}
+                    />
+                  ) : (
+                    "-"
+                  ),
+                },
+                {
+                  label: copy.interest,
+                  value: result ? (
+                    <AnimatedWon
+                      value={result.afterTaxInterest}
+                      animationKey={animationKey}
+                    />
+                  ) : (
+                    "-"
+                  ),
+                },
+              ]}
+            />
+            <p className="mt-3 text-xs leading-5 text-muted-foreground">
+              {copy.notice}
+            </p>
+          </section>
+          <DepositGrowthChart
+            schedule={result?.schedule}
+            animationKey={animationKey}
+            locale={locale}
+          />
+          <details
+            open={detailsOpen}
+            onToggle={(event) => {
+              if (result) setDetailsOpen(event.currentTarget.open);
+            }}
+            className="rounded-xl border bg-card"
+          >
+            <summary
+              onClick={(event) => {
+                if (!result) event.preventDefault();
+              }}
+              className="min-h-12 cursor-pointer list-none px-4 py-3 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {copy.details}
+            </summary>
+            <div className="border-t p-4">
+              {result ? (
+                <div className="max-h-[36rem] overflow-auto rounded-lg border">
+                  <table className="w-full min-w-[620px] text-right text-sm tabular-nums">
+                    <caption className="sr-only">{copy.tableCaption}</caption>
+                    <thead className="sticky top-0 bg-muted">
+                      <tr>
+                        {copy.tableHeadings.map((heading) => (
+                          <th
+                            key={heading}
+                            scope="col"
+                            className="border-b px-3 py-2 font-medium"
+                          >
+                            {heading}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.schedule.map((row) => (
+                        <tr key={row.month} className="border-b last:border-0">
+                          <th scope="row" className="px-3 py-2">
+                            {row.month} {copy.monthSuffix}
+                          </th>
+                          <td className="px-3 py-2">
+                            {formatDepositWon(row.principal)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {formatDepositWon(row.accumulatedInterest)}
+                          </td>
+                          <td className="px-3 py-2">
+                            {formatDepositWon(row.balance)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {copy.emptyDetails}
                 </p>
-                <p className="mt-1 text-muted-foreground">
-                  {appliedValues.interestMethod === "simple"
-                    ? "단리"
-                    : "월복리"}{" "}
-                  · {appliedValues.depositPeriod}
-                  {appliedValues.periodUnit === "years" ? "년" : "개월"}
-                </p>
-              </div>
-              <p className="sr-only" aria-live="polite" aria-atomic="true">
-                {announcement}
-              </p>
-            </>
-          ) : (
-            <div className="mt-6 rounded-xl border border-dashed bg-muted/30 p-6 text-sm leading-6 text-muted-foreground">
-              예치 금액과 기간, 이자율을 입력하면 세전·세후 만기액을 확인할 수
-              있습니다.
+              )}
             </div>
-          )}
-        </section>
+          </details>
+          <details
+            open={additionalOpen}
+            onToggle={(event) => setAdditionalOpen(event.currentTarget.open)}
+            className="rounded-xl border bg-card"
+          >
+            <summary className="min-h-12 cursor-pointer list-none px-4 py-3 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              {copy.additional}
+            </summary>
+            <div className="border-t p-4">
+              {result ? (
+                <>
+                  <dl className="grid gap-3 sm:grid-cols-2">
+                    {[
+                      [
+                        copy.additionalLabels[0],
+                        formatDepositWon(result.maturityBeforeTax),
+                      ],
+                      [
+                        copy.additionalLabels[1],
+                        formatDepositWon(result.grossInterest),
+                      ],
+                      [
+                        copy.additionalLabels[2],
+                        formatDepositWon(result.estimatedTax),
+                      ],
+                      [
+                        copy.additionalLabels[3],
+                        formatDepositPercent(result.effectiveReturnRate),
+                      ],
+                    ].map(([label, value]) => (
+                      <div
+                        key={label}
+                        className="rounded-lg border bg-background p-3"
+                      >
+                        <dt className="text-xs text-muted-foreground">
+                          {label}
+                        </dt>
+                        <dd className="mt-1 font-semibold tabular-nums">
+                          {value}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <h3 className="mt-4 font-medium">{copy.assumptions}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {appliedValues.interestMethod === "simple"
+                      ? copy.simple
+                      : copy.compound}{" "}
+                    · {appliedValues.depositPeriod}{" "}
+                    {appliedValues.periodUnit === "years"
+                      ? copy.years
+                      : copy.months}{" "}
+                    · {taxRate}%
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {copy.emptyDetails}
+                </p>
+              )}
+            </div>
+          </details>
+          <p className="sr-only" aria-live="polite" aria-atomic="true">
+            {announcement}
+          </p>
+        </div>
       </div>
     </section>
   );

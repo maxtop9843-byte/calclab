@@ -1,25 +1,53 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { COMPOUND_ANIMATION_DURATION } from "@/features/compound-interest/components/compound-animation";
 
 import { DepositCalculator } from "./deposit-calculator";
 
+const scrollIntoView = vi.fn();
+
 describe("DepositCalculator", () => {
+  beforeEach(() => {
+    scrollIntoView.mockReset();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn().mockReturnValue({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    });
+  });
   async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
-    await user.type(screen.getByLabelText("예치 금액 *"), "10000000");
+    await user.type(screen.getByLabelText("예치 원금 *"), "10000000");
     await user.type(screen.getByLabelText("예치 기간 *"), "1");
     await user.type(screen.getByLabelText("연 이자율 *"), "3.5");
   }
-  it("renders empty numeric inputs and a helpful result state", () => {
+  it("starts empty with placeholders and stable result areas", () => {
     render(<DepositCalculator />);
-    expect(screen.getByLabelText("예치 금액 *")).toHaveValue("");
-    expect(screen.getByLabelText("이자 방식 *")).toHaveValue("simple");
-    expect(screen.getByLabelText("일반과세 15.4%")).toBeChecked();
-    const result = screen.getByRole("region", { name: "예상 세후 만기액" });
-    expect(within(result).getByText(/예치 금액과 기간/)).toBeVisible();
+    expect(screen.getByLabelText("예치 원금 *")).toHaveValue("");
+    expect(screen.getByLabelText("예치 원금 *")).toHaveAttribute(
+      "placeholder",
+      "예: 10,000,000",
+    );
+    expect(screen.getByLabelText("예치 기간 *")).toHaveValue("");
+    expect(screen.getByLabelText("연 이자율 *")).toHaveValue("");
+    expect(
+      within(screen.getByTestId("primary-results")).getAllByText("-"),
+    ).toHaveLength(3);
+    expect(screen.getByTestId("deposit-growth-chart")).toHaveAttribute(
+      "data-animation-duration",
+      String(COMPOUND_ANIMATION_DURATION),
+    );
+    expect(
+      screen.getByText("상세 내역 보기").closest("details"),
+    ).toHaveAttribute("open");
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
-
-  it("updates compound and tax-free results with a polite announcement", async () => {
+  it("calculates, animates, scrolls, and renders engine schedule records", async () => {
     const user = userEvent.setup();
     render(<DepositCalculator />);
     await fillRequired(user);
@@ -28,38 +56,102 @@ describe("DepositCalculator", () => {
     await user.click(
       screen.getByRole("button", { name: "만기 결과 계산하기" }),
     );
-    expect(screen.getByText(/월복리 · 1년/)).toBeVisible();
-    expect(screen.getByTestId("primary-results").children).toHaveLength(3);
-    expect(screen.getByText(/적용 간이 세율 0%/)).toBeVisible();
-    expect(screen.getByText(/계산이 완료되었습니다/)).toHaveAttribute(
-      "aria-live",
-      "polite",
+    await waitFor(() =>
+      expect(scrollIntoView).toHaveBeenCalledWith({
+        behavior: "smooth",
+        block: "start",
+      }),
     );
+    expect(screen.getAllByTestId("animated-won")).toHaveLength(3);
+    expect(
+      new Set(
+        screen
+          .getAllByTestId("animated-won")
+          .map((node) => node.dataset.animationRun),
+      ),
+    ).toEqual(new Set(["1"]));
+    expect(screen.getByTestId("deposit-growth-chart")).toHaveAttribute(
+      "data-animation-run",
+      "1",
+    );
+    expect(screen.getByRole("table")).toBeVisible();
+    expect(screen.getAllByRole("row")).toHaveLength(13);
+    expect(
+      screen.getByText("추가 결과와 적용 가정").closest("details"),
+    ).toHaveAttribute("open");
   });
-
-  it("supports custom tax", async () => {
+  it("renders fully localized English UI", async () => {
     const user = userEvent.setup();
-    render(<DepositCalculator />);
-    await fillRequired(user);
-    await user.click(screen.getByLabelText("사용자 지정"));
-    await user.type(screen.getByLabelText("사용자 지정 간이 세율 *"), "10");
+    const { container } = render(<DepositCalculator locale="en" />);
+    await user.type(screen.getByLabelText("Initial deposit *"), "10000000");
+    await user.type(screen.getByLabelText("Deposit period *"), "1");
+    await user.type(screen.getByLabelText("Annual interest rate *"), "3.5");
     await user.click(
-      screen.getByRole("button", { name: "만기 결과 계산하기" }),
+      screen.getByRole("button", { name: "Calculate maturity estimate" }),
     );
-    expect(screen.getByText(/적용 간이 세율 10%/)).toBeVisible();
+    expect(screen.getAllByTestId("animated-won")[1]).toHaveAccessibleName(
+      "₩10,000,000",
+    );
+    expect(container.textContent).not.toMatch(/[가-힣]/);
   });
-
-  it("associates errors and focuses the first invalid field", async () => {
+  it("focuses the first invalid field without scrolling", async () => {
     const user = userEvent.setup();
     render(<DepositCalculator />);
-    const amount = screen.getByLabelText("예치 금액 *");
-    await user.clear(amount);
+    const amount = screen.getByLabelText("예치 원금 *");
     await user.type(amount, "0");
     await user.click(
       screen.getByRole("button", { name: "만기 결과 계산하기" }),
     );
-    expect(screen.getByRole("alert")).toBeVisible();
     await waitFor(() => expect(amount).toHaveFocus());
-    expect(amount).toHaveAccessibleDescription(/1만원 이상/);
+    expect(screen.getByRole("alert")).toBeVisible();
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+  it("replays on recalculation and reset restores the empty state", async () => {
+    const user = userEvent.setup();
+    render(<DepositCalculator />);
+    await fillRequired(user);
+    const calculate = screen.getByRole("button", {
+      name: "만기 결과 계산하기",
+    });
+    await user.click(calculate);
+    await user.click(calculate);
+    expect(screen.getByTestId("deposit-growth-chart")).toHaveAttribute(
+      "data-animation-run",
+      "2",
+    );
+    expect(scrollIntoView).toHaveBeenCalledTimes(2);
+    await user.click(screen.getByRole("button", { name: "초기화" }));
+    expect(screen.getByLabelText("예치 원금 *")).toHaveValue("");
+    expect(screen.getByTestId("deposit-growth-chart")).toHaveAttribute(
+      "data-animation-active",
+      "false",
+    );
+  });
+  it("disables chart and number motion for reduced-motion users", async () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn().mockReturnValue({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    });
+    const user = userEvent.setup();
+    render(<DepositCalculator />);
+    await fillRequired(user);
+    await user.click(
+      screen.getByRole("button", { name: "만기 결과 계산하기" }),
+    );
+    expect(screen.getByTestId("deposit-growth-chart")).toHaveAttribute(
+      "data-animation-active",
+      "false",
+    );
+    expect(screen.getAllByTestId("animated-won")[1]).toHaveTextContent(
+      "₩10,000,000",
+    );
+    expect(scrollIntoView).toHaveBeenCalledWith({
+      behavior: "auto",
+      block: "start",
+    });
   });
 });

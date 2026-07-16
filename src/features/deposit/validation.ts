@@ -1,6 +1,7 @@
 import Decimal from "decimal.js";
 
 import { GENERAL_INTEREST_TAX_RATE } from "./constants";
+import { getDepositDictionary, type DepositLocale } from "./i18n";
 import type {
   DepositFormValues,
   DepositInput,
@@ -21,62 +22,60 @@ function parseDecimal(value: string, pattern: RegExp): Decimal | null {
   }
 }
 
-export function validateDepositForm(values: DepositFormValues): {
+export function validateDepositForm(
+  values: DepositFormValues,
+  locale: DepositLocale = "ko",
+): {
   data?: DepositInput;
   errors: DepositValidationErrors;
 } {
   const errors: DepositValidationErrors = {};
+  const copy = getDepositDictionary(locale).validation;
   const amount = parseDecimal(values.depositAmount, MONEY_PATTERN);
   const period = parseDecimal(values.depositPeriod, /^\d+$/);
   const rate = parseDecimal(values.annualInterestRate, DECIMAL_PATTERN);
   const customTax = parseDecimal(values.customTaxRate, DECIMAL_PATTERN);
 
   if (!amount || amount.lt(10000) || amount.gt("1000000000000")) {
-    errors.depositAmount =
-      "예치 금액은 1만원 이상 1조원 이하의 원 단위 금액으로 입력해 주세요.";
+    errors.depositAmount = copy.amount;
   }
   if (!period || !period.isInteger() || period.lt(1)) {
-    errors.depositPeriod = "예치 기간은 1 이상의 정수로 입력해 주세요.";
+    errors.depositPeriod = copy.period;
   }
   if (!(values.periodUnit === "months" || values.periodUnit === "years")) {
-    errors.periodUnit = "예치 기간 단위를 선택해 주세요.";
+    errors.periodUnit = copy.periodUnit;
   }
   if (!rate || rate.isNegative() || rate.gt(100)) {
-    errors.annualInterestRate =
-      "연 이자율은 0% 이상 100% 이하로 입력해 주세요.";
+    errors.annualInterestRate = copy.rate;
   }
   if (!(
     values.interestMethod === "simple" || values.interestMethod === "compound"
   )) {
-    errors.interestMethod = "이자 방식을 선택해 주세요.";
+    errors.interestMethod = copy.method;
   }
   if (
     !(["tax-free", "general", "custom"] as string[]).includes(values.taxOption)
   ) {
-    errors.taxOption = "세금 옵션을 선택해 주세요.";
+    errors.taxOption = copy.tax;
   }
   if (
     values.taxOption === "custom" &&
     (!customTax || customTax.isNegative() || customTax.gt(100))
   ) {
-    errors.customTaxRate =
-      "사용자 지정 세율은 0% 이상 100% 이하로 입력해 주세요.";
+    errors.customTaxRate = copy.customTax;
   }
 
   const months = period
     ? period.mul(values.periodUnit === "years" ? 12 : 1)
     : null;
   if (months && months.gt(1200)) {
-    errors.depositPeriod =
-      "예치 기간은 최대 1,200개월(100년)까지 입력할 수 있습니다.";
+    errors.depositPeriod = copy.maxPeriod;
   }
 
-  if (!values.depositAmount.trim())
-    errors.depositAmount = "예치 금액을 입력해 주세요.";
-  if (!values.depositPeriod.trim())
-    errors.depositPeriod = "예치 기간을 입력해 주세요.";
+  if (!values.depositAmount.trim()) errors.depositAmount = copy.requiredAmount;
+  if (!values.depositPeriod.trim()) errors.depositPeriod = copy.requiredPeriod;
   if (!values.annualInterestRate.trim())
-    errors.annualInterestRate = "연 이자율을 입력해 주세요.";
+    errors.annualInterestRate = copy.requiredRate;
   if (Object.keys(errors).length) return { errors };
 
   const taxRate =

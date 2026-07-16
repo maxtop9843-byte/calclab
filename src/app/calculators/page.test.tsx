@@ -29,7 +29,7 @@ describe("calculator directory", () => {
     );
     expect(screen.getByRole("link", { name: /예금 계산기/ })).toHaveAttribute(
       "href",
-      "/finance/deposit",
+      "/ko/finance/fixed-deposit",
     );
     expect(screen.getByRole("link", { name: /적금 계산기/ })).toHaveAttribute(
       "href",
@@ -61,7 +61,7 @@ describe("calculator directory", () => {
           {
             position: 2,
             name: "예금 계산기",
-            url: "https://calcome.com/finance/deposit",
+            url: "https://calcome.com/ko/finance/fixed-deposit",
           },
           {
             position: 3,

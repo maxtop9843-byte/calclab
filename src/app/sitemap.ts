@@ -14,7 +14,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...publishedCalculators
       .filter(
         (calculator) =>
-          calculator.id !== "compound-interest" && calculator.id !== "savings",
+          calculator.id !== "compound-interest" &&
+          calculator.id !== "savings" &&
+          calculator.id !== "deposit",
       )
       .map((calculator) => ({
         url: absoluteUrl(calculator.href),
@@ -62,6 +64,28 @@ export default function sitemap(): MetadataRoute.Sitemap {
         languages: {
           ko: absoluteUrl("/ko/finance/savings"),
           en: absoluteUrl("/en/finance/savings"),
+        },
+      },
+    },
+    {
+      url: absoluteUrl("/ko/finance/fixed-deposit"),
+      changeFrequency: "monthly",
+      priority: 0.9,
+      alternates: {
+        languages: {
+          ko: absoluteUrl("/ko/finance/fixed-deposit"),
+          en: absoluteUrl("/en/finance/fixed-deposit"),
+        },
+      },
+    },
+    {
+      url: absoluteUrl("/en/finance/fixed-deposit"),
+      changeFrequency: "monthly",
+      priority: 0.9,
+      alternates: {
+        languages: {
+          ko: absoluteUrl("/ko/finance/fixed-deposit"),
+          en: absoluteUrl("/en/finance/fixed-deposit"),
         },
       },
     },
