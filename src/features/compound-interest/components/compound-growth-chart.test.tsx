@@ -86,7 +86,7 @@ describe("CompoundGrowthChart", () => {
     await waitFor(() =>
       expect(chart).toHaveAttribute("data-animation-active", "true"),
     );
-    expect(GROWTH_LINE_ANIMATION_DURATION).toBe(1600);
+    expect(GROWTH_LINE_ANIMATION_DURATION).toBe(1300);
     expect(chart).toHaveAttribute(
       "data-animation-duration",
       String(GROWTH_LINE_ANIMATION_DURATION),
