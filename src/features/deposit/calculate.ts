@@ -7,6 +7,20 @@ Decimal.set({ precision: 80, rounding: Decimal.ROUND_HALF_UP });
 export function calculateDeposit(input: DepositInput): DepositResult {
   const principal = new Decimal(input.principal);
   const annualRate = new Decimal(input.annualInterestRate).div(100);
+  const monthlyRate = annualRate.div(12);
+  const schedule = Array.from({ length: input.months }, (_, index) => {
+    const month = index + 1;
+    const accumulatedInterest =
+      input.interestMethod === "simple"
+        ? principal.mul(annualRate).mul(month).div(12)
+        : principal.mul(monthlyRate.plus(1).pow(month)).minus(principal);
+    return {
+      month,
+      principal: principal.toString(),
+      accumulatedInterest: accumulatedInterest.toString(),
+      balance: principal.plus(accumulatedInterest).toString(),
+    };
+  });
   const grossInterest =
     input.interestMethod === "simple"
       ? principal.mul(annualRate).mul(input.months).div(12)
@@ -27,5 +41,6 @@ export function calculateDeposit(input: DepositInput): DepositResult {
     maturityBeforeTax: maturityBeforeTax.toString(),
     maturityAfterTax: maturityAfterTax.toString(),
     effectiveReturnRate: effectiveReturnRate.toString(),
+    schedule,
   };
 }

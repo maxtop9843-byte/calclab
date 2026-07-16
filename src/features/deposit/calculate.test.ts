@@ -103,5 +103,11 @@ describe("calculateDeposit", () => {
         .plus(result.afterTaxInterest)
         .equals(result.maturityAfterTax),
     ).toBe(true);
+    expect(result.schedule).toHaveLength(12);
+    expect(result.schedule.at(-1)).toMatchObject({
+      principal: result.principal,
+      accumulatedInterest: result.grossInterest,
+      balance: result.maturityBeforeTax,
+    });
   });
 });

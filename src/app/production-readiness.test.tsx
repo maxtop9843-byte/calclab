@@ -69,11 +69,6 @@ describe("production metadata routes", () => {
         priority: 0.9,
       },
       {
-        url: "https://calcome.com/finance/deposit",
-        changeFrequency: "monthly",
-        priority: 0.9,
-      },
-      {
         url: "https://calcome.com/finance/loan",
         changeFrequency: "monthly",
         priority: 0.9,
@@ -119,6 +114,28 @@ describe("production metadata routes", () => {
           languages: {
             ko: "https://calcome.com/ko/finance/savings",
             en: "https://calcome.com/en/finance/savings",
+          },
+        },
+      },
+      {
+        url: "https://calcome.com/ko/finance/fixed-deposit",
+        changeFrequency: "monthly",
+        priority: 0.9,
+        alternates: {
+          languages: {
+            ko: "https://calcome.com/ko/finance/fixed-deposit",
+            en: "https://calcome.com/en/finance/fixed-deposit",
+          },
+        },
+      },
+      {
+        url: "https://calcome.com/en/finance/fixed-deposit",
+        changeFrequency: "monthly",
+        priority: 0.9,
+        alternates: {
+          languages: {
+            ko: "https://calcome.com/ko/finance/fixed-deposit",
+            en: "https://calcome.com/en/finance/fixed-deposit",
           },
         },
       },
@@ -178,7 +195,7 @@ describe("production recovery and navigation", () => {
     ]);
     expect(screen.getByRole("link", { name: /예금 계산기/ })).toHaveAttribute(
       "href",
-      "/finance/deposit",
+      "/ko/finance/fixed-deposit",
     );
     expect(screen.getByRole("link", { name: /적금 계산기/ })).toHaveAttribute(
       "href",

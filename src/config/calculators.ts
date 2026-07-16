@@ -22,7 +22,7 @@ export const publishedCalculators = [
     description: "목돈 예금의 세전·세후 이자와 예상 만기액을 계산합니다.",
     keywords: ["예금", "deposit", "목돈", "만기", "이자"],
     category: "금융",
-    href: "/finance/deposit",
+    href: "/ko/finance/fixed-deposit",
   },
   {
     id: "savings",

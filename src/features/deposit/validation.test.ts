@@ -4,6 +4,11 @@ import { DEFAULT_DEPOSIT_VALUES, GENERAL_INTEREST_TAX_RATE } from "./constants";
 import { validateDepositForm } from "./validation";
 
 describe("validateDepositForm", () => {
+  it("produces identical calculation input for Korean and English", () => {
+    expect(validateDepositForm(DEFAULT_DEPOSIT_VALUES, "ko").data).toEqual(
+      validateDepositForm(DEFAULT_DEPOSIT_VALUES, "en").data,
+    );
+  });
   it("normalizes years and applies the shared general rate", () => {
     expect(validateDepositForm(DEFAULT_DEPOSIT_VALUES).data).toMatchObject({
       months: 12,

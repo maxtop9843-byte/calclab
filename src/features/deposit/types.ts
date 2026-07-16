@@ -29,6 +29,14 @@ export type DepositResult = {
   maturityBeforeTax: string;
   maturityAfterTax: string;
   effectiveReturnRate: string;
+  schedule: DepositScheduleRow[];
+};
+
+export type DepositScheduleRow = {
+  month: number;
+  principal: string;
+  accumulatedInterest: string;
+  balance: string;
 };
 
 export type DepositField = keyof DepositFormValues;

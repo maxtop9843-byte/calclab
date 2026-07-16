@@ -72,4 +72,24 @@ describe("LanguageSelector", () => {
       "/ko/finance/savings",
     );
   });
+
+  it("preserves the localized fixed-deposit destination", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <LanguageSelector locale="ko" pathname="/ko/finance/fixed-deposit" />,
+    );
+    await user.click(screen.getByLabelText("언어 선택"));
+    expect(screen.getByRole("link", { name: "English" })).toHaveAttribute(
+      "href",
+      "/en/finance/fixed-deposit",
+    );
+    rerender(
+      <LanguageSelector locale="en" pathname="/en/finance/fixed-deposit" />,
+    );
+    await user.click(screen.getByLabelText("Select language"));
+    expect(screen.getByRole("link", { name: "한국어" })).toHaveAttribute(
+      "href",
+      "/ko/finance/fixed-deposit",
+    );
+  });
 });
