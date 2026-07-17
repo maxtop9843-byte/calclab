@@ -79,6 +79,7 @@ describe("legacy calculator redirects", () => {
         destination: "/ko/employment/overtime-pay",
         permanent: true,
       },
+      { source: "/employment/night-work-pay", destination: "/ko/employment/night-work-pay", permanent: true },
     ]);
   });
 });
