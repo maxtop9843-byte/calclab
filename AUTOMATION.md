@@ -41,7 +41,9 @@ These rules always take priority over implementation details.
 
 # Required Validation
 
-Before pushing, always execute:
+Before running validation, delete the `.next` directory to remove stale Next.js generated output.
+
+Then, before pushing, always execute:
 
 npm run check
 
