@@ -25,7 +25,7 @@ describe("calculator directory", () => {
     ).toHaveLength(5);
     expect(screen.getByRole("link", { name: /CAGR 계산기/ })).toHaveAttribute(
       "href",
-      "/finance/cagr",
+      "/ko/finance/cagr",
     );
     expect(screen.getByRole("link", { name: /예금 계산기/ })).toHaveAttribute(
       "href",
@@ -56,7 +56,7 @@ describe("calculator directory", () => {
           {
             position: 1,
             name: "CAGR 계산기",
-            url: "https://calcome.com/finance/cagr",
+            url: "https://calcome.com/ko/finance/cagr",
           },
           {
             position: 2,

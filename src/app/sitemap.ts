@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
 
-import { publishedCalculators } from "@/config/calculators";
 import { absoluteUrl } from "@/config/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -11,19 +10,28 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.9,
     },
-    ...publishedCalculators
-      .filter(
-        (calculator) =>
-          calculator.id !== "compound-interest" &&
-          calculator.id !== "savings" &&
-          calculator.id !== "deposit" &&
-          calculator.id !== "loan",
-      )
-      .map((calculator) => ({
-        url: absoluteUrl(calculator.href),
-        changeFrequency: "monthly" as const,
-        priority: 0.9,
-      })),
+    {
+      url: absoluteUrl("/ko/finance/cagr"),
+      changeFrequency: "monthly",
+      priority: 0.9,
+      alternates: {
+        languages: {
+          ko: absoluteUrl("/ko/finance/cagr"),
+          en: absoluteUrl("/en/finance/cagr"),
+        },
+      },
+    },
+    {
+      url: absoluteUrl("/en/finance/cagr"),
+      changeFrequency: "monthly",
+      priority: 0.9,
+      alternates: {
+        languages: {
+          ko: absoluteUrl("/ko/finance/cagr"),
+          en: absoluteUrl("/en/finance/cagr"),
+        },
+      },
+    },
     {
       url: absoluteUrl("/ko/finance/compound-interest"),
       changeFrequency: "monthly",
