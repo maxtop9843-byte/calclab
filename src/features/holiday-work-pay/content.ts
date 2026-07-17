@@ -1,0 +1,43 @@
+export type Locale = "ko" | "en";
+export const content = {
+  ko: {
+    title: "휴일근로수당 계산기",
+    metaTitle: "휴일근로수당 계산기",
+    description:
+      "통상시급과 휴일근로시간, 가산율로 예상 휴일근로수당을 계산합니다.",
+    category: "근로·급여 계산기",
+    input: "휴일근로 조건",
+    wage: "통상시급",
+    hours: "휴일근로시간",
+    rate: "가산율",
+    calculate: "휴일근로수당 계산하기",
+    reset: "초기화",
+    error: "입력값을 확인해 주세요.",
+    total: "총 휴일근로수당",
+    base: "기본 임금분",
+    premium: "가산 임금분",
+    details: "계산 상세",
+    note: "세전 추정치입니다. 근로시간과 사업장 적용 기준을 확인하세요.",
+    empty: "계산하면 상세 조건이 표시됩니다.",
+  },
+  en: {
+    title: "Korean Holiday Work Pay Calculator",
+    metaTitle: "Korean Holiday Work Pay Calculator",
+    description:
+      "Estimate Korean holiday work pay from hourly wage, hours, and premium rate.",
+    category: "Employment calculator",
+    input: "Holiday-work inputs",
+    wage: "Ordinary hourly wage",
+    hours: "Holiday-work hours",
+    rate: "Premium rate",
+    calculate: "Calculate holiday work pay",
+    reset: "Reset",
+    error: "Check the highlighted values.",
+    total: "Total holiday-work pay",
+    base: "Base wage portion",
+    premium: "Premium portion",
+    details: "Calculation details",
+    note: "A gross estimate; confirm work hours and workplace coverage.",
+    empty: "Calculate to see applied conditions.",
+  },
+} as const;
