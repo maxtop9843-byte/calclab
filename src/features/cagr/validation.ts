@@ -1,6 +1,7 @@
 import Decimal from "decimal.js";
 
 import { MAX_CAGR_MONTHS, MAX_CAGR_VALUE } from "./constants";
+import { getCagrDictionary, type CagrLocale } from "./i18n";
 import type { CagrFormValues, CagrInput, CagrValidationErrors } from "./types";
 
 Decimal.set({ precision: 80, rounding: Decimal.ROUND_HALF_UP });
@@ -18,41 +19,42 @@ function parseDecimal(value: string, pattern: RegExp): Decimal | null {
   }
 }
 
-export function validateCagrForm(values: CagrFormValues): {
+export function validateCagrForm(
+  values: CagrFormValues,
+  locale: CagrLocale = "ko",
+): {
   data?: CagrInput;
   errors: CagrValidationErrors;
 } {
   const errors: CagrValidationErrors = {};
+  const copy = getCagrDictionary(locale).validation;
   const initialValue = parseDecimal(values.initialValue, VALUE_PATTERN);
   const finalValue = parseDecimal(values.finalValue, VALUE_PATTERN);
   const period = parseDecimal(values.investmentPeriod, /^\d+$/);
 
   if (!initialValue || initialValue.lte(0) || initialValue.gt(MAX_CAGR_VALUE)) {
-    errors.initialValue =
-      "시작값은 0보다 크고 1조원 이하인 숫자로 입력해 주세요.";
+    errors.initialValue = copy.initialInvalid;
   }
   if (!finalValue || finalValue.isNegative() || finalValue.gt(MAX_CAGR_VALUE)) {
-    errors.finalValue = "종료값은 0 이상 1조원 이하인 숫자로 입력해 주세요.";
+    errors.finalValue = copy.finalInvalid;
   }
   if (!period || !period.isInteger() || period.lt(1)) {
-    errors.investmentPeriod = "투자 기간은 1 이상의 정수로 입력해 주세요.";
+    errors.investmentPeriod = copy.periodInvalid;
   }
   if (!(values.periodUnit === "years" || values.periodUnit === "months")) {
-    errors.periodUnit = "투자 기간 단위를 선택해 주세요.";
+    errors.periodUnit = copy.unitInvalid;
   }
 
   const months = period
     ? period.mul(values.periodUnit === "years" ? 12 : 1)
     : null;
   if (months && months.gt(MAX_CAGR_MONTHS)) {
-    errors.investmentPeriod =
-      "투자 기간은 최대 1,200개월(100년)까지 입력할 수 있습니다.";
+    errors.investmentPeriod = copy.periodMax;
   }
-  if (!values.initialValue.trim())
-    errors.initialValue = "시작값을 입력해 주세요.";
-  if (!values.finalValue.trim()) errors.finalValue = "종료값을 입력해 주세요.";
+  if (!values.initialValue.trim()) errors.initialValue = copy.initialRequired;
+  if (!values.finalValue.trim()) errors.finalValue = copy.finalRequired;
   if (!values.investmentPeriod.trim())
-    errors.investmentPeriod = "투자 기간을 입력해 주세요.";
+    errors.investmentPeriod = copy.periodRequired;
 
   if (Object.keys(errors).length) return { errors };
 

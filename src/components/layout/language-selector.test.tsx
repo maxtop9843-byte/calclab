@@ -110,4 +110,22 @@ describe("LanguageSelector", () => {
       "/ko/finance/loan",
     );
   });
+
+  it("preserves the localized CAGR destination", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <LanguageSelector locale="ko" pathname="/ko/finance/cagr" />,
+    );
+    await user.click(screen.getByLabelText("언어 선택"));
+    expect(screen.getByRole("link", { name: "English" })).toHaveAttribute(
+      "href",
+      "/en/finance/cagr",
+    );
+    rerender(<LanguageSelector locale="en" pathname="/en/finance/cagr" />);
+    await user.click(screen.getByLabelText("Select language"));
+    expect(screen.getByRole("link", { name: "한국어" })).toHaveAttribute(
+      "href",
+      "/ko/finance/cagr",
+    );
+  });
 });

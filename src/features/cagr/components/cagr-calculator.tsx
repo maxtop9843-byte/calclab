@@ -1,31 +1,38 @@
 "use client";
 
+import Decimal from "decimal.js";
 import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
 
 import {
-  CalculatorActions,
   PrimaryResults,
-  calculatorSettingsClass,
-  calculatorWorkspaceClass,
+  compactCalculatorSettingsClass,
+  dashboardCalculatorWorkspaceClass,
 } from "@/components/calculators/calculator-workspace";
+import { Button } from "@/components/ui/button";
+import { useStableResultScroll } from "@/hooks/use-stable-result-scroll";
 import { formatMoneyInput } from "@/lib/input/money";
 
 import { calculateCagr } from "../calculate";
 import { DEFAULT_CAGR_VALUES } from "../constants";
 import {
-  describeAnnualizedGrowth,
+  formatCagrMultiple,
   formatCagrPercent,
   formatCagrWon,
 } from "../format";
+import { createCagrGrowthRecords } from "../growth";
+import { getCagrDictionary, type CagrLocale } from "../i18n";
 import type {
   CagrField,
   CagrFormValues,
+  CagrGrowthRecord,
   CagrResult,
   CagrValidationErrors,
 } from "../types";
 import { validateCagrForm } from "../validation";
+import { AnimatedCagrValue } from "./animated-cagr-value";
+import { CagrGrowthChart } from "./cagr-growth-chart";
 
-const INITIAL_CAGR_VALUES: CagrFormValues = {
+const INITIAL_VALUES: CagrFormValues = {
   ...DEFAULT_CAGR_VALUES,
   initialValue: "",
   finalValue: "",
@@ -33,9 +40,20 @@ const INITIAL_CAGR_VALUES: CagrFormValues = {
 };
 
 const controlClass =
-  "mt-2 h-11 w-full rounded-lg border bg-background px-3 text-base tabular-nums shadow-sm outline-none transition focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20";
+  "mt-1.5 h-10 w-full rounded-lg border bg-background px-3 text-base tabular-nums shadow-sm outline-none transition placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 aria-invalid:border-destructive sm:text-sm";
 
-type NumberFieldProps = {
+function NumberField({
+  field,
+  label,
+  value,
+  unit,
+  help,
+  error,
+  placeholder,
+  money,
+  onChange,
+  onBlur,
+}: {
   field: CagrField;
   label: string;
   value: string;
@@ -46,21 +64,7 @@ type NumberFieldProps = {
   money?: boolean;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onBlur: () => void;
-};
-
-function NumberField({
-  field,
-  label,
-  value,
-  unit,
-  help,
-  error,
-  placeholder,
-  money = false,
-  onChange,
-  onBlur,
-}: NumberFieldProps) {
-  const describedBy = `${field}-help${error ? ` ${field}-error` : ""}`;
+}) {
   return (
     <div>
       <label htmlFor={field} className="text-sm font-medium">
@@ -71,31 +75,28 @@ function NumberField({
           id={field}
           name={field}
           value={value}
+          placeholder={placeholder}
           onChange={(event) => {
             if (money)
               event.target.value = formatMoneyInput(event.target.value, value);
             onChange(event);
           }}
-          placeholder={placeholder}
           onBlur={onBlur}
           inputMode="decimal"
           autoComplete="off"
           aria-invalid={Boolean(error)}
-          aria-describedby={describedBy}
+          aria-describedby={`${field}-help${error ? ` ${field}-error` : ""}`}
           className={`${controlClass} pr-14`}
         />
-        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center pt-2 text-sm text-muted-foreground">
+        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center pt-1.5 text-sm text-muted-foreground">
           {unit}
         </span>
       </div>
-      <p
-        id={`${field}-help`}
-        className="mt-1.5 text-xs leading-5 text-muted-foreground"
-      >
+      <p id={`${field}-help`} className="sr-only">
         {help}
       </p>
       {error ? (
-        <p id={`${field}-error`} className="mt-1.5 text-sm text-destructive">
+        <p id={`${field}-error`} className="mt-1 text-sm text-destructive">
           {error}
         </p>
       ) : null}
@@ -103,20 +104,33 @@ function NumberField({
   );
 }
 
-export function CagrCalculator() {
-  const [values, setValues] = useState<CagrFormValues>(INITIAL_CAGR_VALUES);
+export function CagrCalculator({ locale = "ko" }: { locale?: CagrLocale }) {
+  const copy = getCagrDictionary(locale).calculator;
+  const localeCode = locale === "ko" ? "ko-KR" : "en-US";
+  const [values, setValues] = useState<CagrFormValues>(INITIAL_VALUES);
   const [errors, setErrors] = useState<CagrValidationErrors>({});
   const [result, setResult] = useState<CagrResult | null>(null);
-  const [appliedValues, setAppliedValues] = useState(DEFAULT_CAGR_VALUES);
+  const [appliedValues, setAppliedValues] =
+    useState<CagrFormValues>(INITIAL_VALUES);
+  const [records, setRecords] = useState<CagrGrowthRecord[]>([]);
+  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [additionalOpen, setAdditionalOpen] = useState(false);
+  const [animationKey, setAnimationKey] = useState(0);
   const [announcement, setAnnouncement] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
+  const {
+    resultRef,
+    noteNumericInputFocus,
+    requestResultScroll,
+    cancelResultScroll,
+  } = useStableResultScroll(result);
 
   function updateValue(field: CagrField, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
   }
 
   function validateField(field: CagrField) {
-    const validation = validateCagrForm(values);
+    const validation = validateCagrForm(values, locale);
     setErrors((current) => {
       const next = { ...current };
       if (validation.errors[field]) next[field] = validation.errors[field];
@@ -127,7 +141,7 @@ export function CagrCalculator() {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const validation = validateCagrForm(values);
+    const validation = validateCagrForm(values, locale);
     setErrors(validation.errors);
     setAnnouncement("");
     if (!validation.data) {
@@ -138,57 +152,75 @@ export function CagrCalculator() {
       return;
     }
     const next = calculateCagr(validation.data);
+    requestResultScroll();
     setResult(next);
+    setRecords(createCagrGrowthRecords(validation.data, values.periodUnit));
     setAppliedValues(values);
-    setAnnouncement(
-      `계산이 완료되었습니다. 연평균 복합성장률은 ${formatCagrPercent(next.cagrPercent)}입니다.`,
-    );
+    setAnimationKey((current) => current + 1);
+    setDetailsOpen(true);
+    setAdditionalOpen(true);
+    setAnnouncement(copy.complete(formatCagrPercent(next.cagrPercent)));
   }
+
   function reset() {
-    setValues(INITIAL_CAGR_VALUES);
+    cancelResultScroll();
+    setValues(INITIAL_VALUES);
     setErrors({});
     setResult(null);
-    setAppliedValues(DEFAULT_CAGR_VALUES);
-    setAnnouncement("입력값과 계산 결과를 초기화했습니다.");
+    setAppliedValues(INITIAL_VALUES);
+    setRecords([]);
+    setDetailsOpen(true);
+    setAdditionalOpen(false);
+    setAnnouncement(copy.resetAnnouncement);
   }
+
+  const initial = result
+    ? new Decimal(appliedValues.initialValue.replaceAll(",", ""))
+    : null;
+  const ending = result
+    ? new Decimal(appliedValues.finalValue.replaceAll(",", ""))
+    : null;
+  const multiple = initial && ending ? ending.div(initial) : null;
+  const periodLabel = result
+    ? `${appliedValues.investmentPeriod} ${appliedValues.periodUnit === "years" ? copy.years : copy.months}`
+    : "-";
 
   return (
     <section aria-labelledby="cagr-calculator-title">
-      <div className={calculatorWorkspaceClass}>
+      <div className={dashboardCalculatorWorkspaceClass}>
         <form
           ref={formRef}
           noValidate
           onSubmit={submit}
-          className={calculatorSettingsClass}
+          onFocusCapture={noteNumericInputFocus}
+          className={`${compactCalculatorSettingsClass} min-w-0`}
         >
-          <p className="text-sm font-semibold text-primary">입력</p>
-          <h2
-            id="cagr-calculator-title"
-            className="mt-1 text-2xl font-semibold tracking-tight"
-          >
-            투자 성과 설정
+          <p className="text-sm font-semibold text-primary">
+            {copy.inputEyebrow}
+          </p>
+          <h2 id="cagr-calculator-title" className="mt-1 text-xl font-semibold">
+            {copy.inputTitle}
           </h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            별표(*) 항목은 필수입니다. 추가 현금흐름이 없는 두 시점의 값을
-            입력하세요.
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            {copy.inputDescription}
           </p>
           {Object.keys(errors).length ? (
             <div
               role="alert"
-              className="mt-5 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm"
+              className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm"
             >
-              입력값을 확인해 주세요. 첫 번째 오류 항목으로 이동했습니다.
+              {copy.errorSummary}
             </div>
           ) : null}
-          <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
             <NumberField
               field="initialValue"
-              label="시작값"
+              label={copy.initialValue}
               value={values.initialValue}
-              unit="원"
-              help="투자나 지표의 최초 평가액"
+              unit={copy.won}
+              help={copy.initialHelp}
               error={errors.initialValue}
-              placeholder="예: 10,000,000"
+              placeholder={copy.initialPlaceholder}
               money
               onChange={(event) =>
                 updateValue("initialValue", event.target.value)
@@ -197,12 +229,12 @@ export function CagrCalculator() {
             />
             <NumberField
               field="finalValue"
-              label="종료값"
+              label={copy.finalValue}
               value={values.finalValue}
-              unit="원"
-              help="투자 기간이 끝난 시점의 평가액"
+              unit={copy.won}
+              help={copy.finalHelp}
               error={errors.finalValue}
-              placeholder="예: 15,000,000"
+              placeholder={copy.finalPlaceholder}
               money
               onChange={(event) =>
                 updateValue("finalValue", event.target.value)
@@ -211,12 +243,12 @@ export function CagrCalculator() {
             />
             <NumberField
               field="investmentPeriod"
-              label="투자 기간"
+              label={copy.period}
               value={values.investmentPeriod}
-              unit={values.periodUnit === "years" ? "년" : "개월"}
-              help="최대 100년 또는 1,200개월"
+              unit={values.periodUnit === "years" ? copy.years : copy.months}
+              help={copy.periodHelp}
               error={errors.investmentPeriod}
-              placeholder="예: 5"
+              placeholder={copy.periodPlaceholder}
               onChange={(event) =>
                 updateValue("investmentPeriod", event.target.value)
               }
@@ -224,7 +256,7 @@ export function CagrCalculator() {
             />
             <div>
               <label htmlFor="periodUnit" className="text-sm font-medium">
-                기간 단위 <span className="text-destructive">*</span>
+                {copy.periodUnit} <span className="text-destructive">*</span>
               </label>
               <select
                 id="periodUnit"
@@ -234,72 +266,208 @@ export function CagrCalculator() {
                 }
                 className={controlClass}
               >
-                <option value="years">년</option>
-                <option value="months">개월</option>
+                <option value="years">{copy.years}</option>
+                <option value="months">{copy.months}</option>
               </select>
             </div>
           </div>
-          <CalculatorActions submitLabel="CAGR 계산하기" onReset={reset} />
+          <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+            <Button type="submit" size="lg" className="h-11">
+              {copy.calculate}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="h-11"
+              onClick={reset}
+            >
+              {copy.reset}
+            </Button>
+          </div>
         </form>
 
-        <section
-          aria-labelledby="cagr-result-title"
-          className="rounded-2xl border bg-card p-5 shadow-sm sm:p-7"
-        >
-          <p className="text-sm font-semibold text-primary">계산 결과</p>
-          <h2
-            id="cagr-result-title"
-            className="mt-1 text-2xl font-semibold tracking-tight"
+        <div className="min-w-0 space-y-4">
+          <section
+            ref={resultRef}
+            aria-labelledby="cagr-result-title"
+            className="scroll-mt-20 rounded-xl border bg-card p-4 shadow-sm"
           >
-            연평균 복합성장률(CAGR)
-          </h2>
-          {result ? (
-            <>
-              <PrimaryResults
-                metrics={[
-                  {
-                    label: "CAGR",
-                    value: formatCagrPercent(result.cagrPercent),
-                    featured: true,
-                  },
-                  {
-                    label: "총수익률",
-                    value: formatCagrPercent(result.totalReturnPercent),
-                  },
-                  {
-                    label: "절대 손익",
-                    value: formatCagrWon(result.absoluteProfit),
-                  },
-                ]}
-              />
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                매년 같은 복리 비율로 변했다고 가정한 연환산 값입니다.
-              </p>
-              <div className="mt-5 rounded-xl bg-muted p-4 text-sm leading-6">
-                <p className="font-medium">연환산 성장 요약</p>
-                <p className="mt-1 text-muted-foreground">
-                  {describeAnnualizedGrowth(result.cagrPercent)}{" "}
-                  {formatCagrPercent(result.cagrPercent)} · 전체 변화{" "}
-                  {formatCagrPercent(result.totalReturnPercent)}
-                </p>
-                <p className="mt-1 text-muted-foreground">
-                  {appliedValues.investmentPeriod}
-                  {appliedValues.periodUnit === "years"
-                    ? "년"
-                    : "개월"} 동안 {formatCagrWon(result.absoluteProfit)} 변화
-                </p>
+            <p className="text-sm font-semibold text-primary">
+              {copy.resultEyebrow}
+            </p>
+            <h2 id="cagr-result-title" className="mt-1 text-xl font-semibold">
+              {copy.resultTitle}
+            </h2>
+            <PrimaryResults
+              metrics={[
+                {
+                  label: copy.cagr,
+                  value: (
+                    <AnimatedCagrValue
+                      key={`cagr-${result ? animationKey : "empty"}`}
+                      value={result?.cagrPercent ?? null}
+                      format={formatCagrPercent}
+                      animationKey={animationKey}
+                    />
+                  ),
+                  featured: true,
+                },
+                {
+                  label: copy.totalGrowth,
+                  value: (
+                    <AnimatedCagrValue
+                      key={`growth-${result ? animationKey : "empty"}`}
+                      value={result?.totalReturnPercent ?? null}
+                      format={formatCagrPercent}
+                      animationKey={animationKey}
+                    />
+                  ),
+                },
+                {
+                  label: copy.absoluteProfit,
+                  value: (
+                    <AnimatedCagrValue
+                      key={`profit-${result ? animationKey : "empty"}`}
+                      value={result?.absoluteProfit ?? null}
+                      format={(value) => formatCagrWon(value, localeCode)}
+                      animationKey={animationKey}
+                    />
+                  ),
+                },
+              ]}
+            />
+            <p className="mt-3 text-sm text-muted-foreground">
+              {copy.resultNote}
+            </p>
+            <p className="sr-only" aria-live="polite" aria-atomic="true">
+              {announcement}
+            </p>
+          </section>
+
+          <CagrGrowthChart
+            records={result ? records : undefined}
+            periodUnit={appliedValues.periodUnit}
+            animationKey={animationKey}
+            locale={locale}
+          />
+
+          <details
+            open={result ? detailsOpen : true}
+            onToggle={(event) => {
+              if (result) setDetailsOpen(event.currentTarget.open);
+            }}
+            className="rounded-xl border bg-card p-4 shadow-sm"
+          >
+            <summary
+              aria-disabled={!result}
+              onClick={(event) => {
+                if (!result) event.preventDefault();
+              }}
+              className="min-h-10 cursor-pointer content-center font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {copy.details}
+            </summary>
+            {result ? (
+              <div className="mt-4 max-h-[36rem] overflow-auto rounded-lg border">
+                <table className="w-full min-w-[520px] text-right text-sm tabular-nums">
+                  <caption className="sr-only">{copy.tableCaption}</caption>
+                  <thead className="sticky top-0 bg-muted">
+                    <tr>
+                      <th scope="col" className="px-3 py-3 text-left">
+                        {copy.periodIndex}
+                      </th>
+                      <th scope="col" className="px-3 py-3">
+                        {copy.estimatedValue}
+                      </th>
+                      <th scope="col" className="px-3 py-3">
+                        {copy.cumulativeGrowth}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {records.map((record) => (
+                      <tr key={record.index} className="border-t">
+                        <th
+                          scope="row"
+                          className="px-3 py-3 text-left font-medium"
+                        >
+                          {record.index}{" "}
+                          {appliedValues.periodUnit === "years"
+                            ? copy.years
+                            : copy.months}
+                        </th>
+                        <td className="px-3 py-3">
+                          {formatCagrWon(record.value, localeCode)}
+                        </td>
+                        <td className="px-3 py-3">
+                          {formatCagrPercent(record.growthPercent)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <p className="sr-only" aria-live="polite" aria-atomic="true">
-                {announcement}
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">
+                {copy.detailsEmpty}
               </p>
-            </>
-          ) : (
-            <div className="mt-6 rounded-xl border border-dashed bg-muted/30 p-6 text-sm leading-6 text-muted-foreground">
-              시작값과 종료값, 투자 기간을 입력하면 CAGR과 총수익률을 확인할 수
-              있습니다.
-            </div>
-          )}
-        </section>
+            )}
+          </details>
+
+          <details
+            open={additionalOpen}
+            onToggle={(event) => setAdditionalOpen(event.currentTarget.open)}
+            className="rounded-xl border bg-card p-4 shadow-sm"
+          >
+            <summary className="min-h-10 cursor-pointer content-center font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              {copy.additional}
+            </summary>
+            {result ? (
+              <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+                {[
+                  [
+                    copy.beginningValue,
+                    <AnimatedCagrValue
+                      key={`initial-${animationKey}`}
+                      value={initial}
+                      format={(value) => formatCagrWon(value, localeCode)}
+                      animationKey={animationKey}
+                    />,
+                  ],
+                  [
+                    copy.endingValue,
+                    <AnimatedCagrValue
+                      key={`ending-${animationKey}`}
+                      value={ending}
+                      format={(value) => formatCagrWon(value, localeCode)}
+                      animationKey={animationKey}
+                    />,
+                  ],
+                  [copy.investmentPeriod, periodLabel],
+                  [
+                    copy.growthMultiple,
+                    <AnimatedCagrValue
+                      key={`multiple-${animationKey}`}
+                      value={multiple}
+                      format={formatCagrMultiple}
+                      animationKey={animationKey}
+                    />,
+                  ],
+                ].map(([label, value]) => (
+                  <div key={String(label)} className="rounded-lg bg-muted p-3">
+                    <dt className="text-xs text-muted-foreground">{label}</dt>
+                    <dd className="mt-1 font-semibold tabular-nums">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">
+                {copy.additionalEmpty}
+              </p>
+            )}
+          </details>
+        </div>
       </div>
     </section>
   );

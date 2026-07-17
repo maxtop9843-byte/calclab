@@ -20,5 +20,12 @@ export type CagrResult = {
   years: string;
 };
 
+export type CagrGrowthRecord = {
+  index: number;
+  years: string;
+  value: string;
+  growthPercent: string;
+};
+
 export type CagrField = keyof CagrFormValues;
 export type CagrValidationErrors = Partial<Record<CagrField, string>>;

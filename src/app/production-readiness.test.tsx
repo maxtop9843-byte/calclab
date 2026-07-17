@@ -64,9 +64,26 @@ describe("production metadata routes", () => {
         priority: 0.9,
       },
       {
-        url: "https://calcome.com/finance/cagr",
+        url: "https://calcome.com/ko/finance/cagr",
         changeFrequency: "monthly",
         priority: 0.9,
+        alternates: {
+          languages: {
+            ko: "https://calcome.com/ko/finance/cagr",
+            en: "https://calcome.com/en/finance/cagr",
+          },
+        },
+      },
+      {
+        url: "https://calcome.com/en/finance/cagr",
+        changeFrequency: "monthly",
+        priority: 0.9,
+        alternates: {
+          languages: {
+            ko: "https://calcome.com/ko/finance/cagr",
+            en: "https://calcome.com/en/finance/cagr",
+          },
+        },
       },
       {
         url: "https://calcome.com/ko/finance/compound-interest",
@@ -221,6 +238,10 @@ describe("production recovery and navigation", () => {
     expect(screen.getByRole("link", { name: /적금 계산기/ })).toHaveAttribute(
       "href",
       "/ko/finance/savings",
+    );
+    expect(screen.getByRole("link", { name: /CAGR 계산기/ })).toHaveAttribute(
+      "href",
+      "/ko/finance/cagr",
     );
     expect(screen.getByRole("link", { name: /복리 계산기/ })).toHaveAttribute(
       "href",

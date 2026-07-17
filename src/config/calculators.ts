@@ -14,7 +14,7 @@ export const publishedCalculators = [
     description: "시작값과 종료값의 연평균 복합성장률과 총수익률을 계산합니다.",
     keywords: ["cagr", "연평균", "성장률", "수익률", "투자"],
     category: "금융",
-    href: "/finance/cagr",
+    href: "/ko/finance/cagr",
   },
   {
     id: "deposit",

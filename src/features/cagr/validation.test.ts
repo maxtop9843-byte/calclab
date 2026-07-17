@@ -68,4 +68,11 @@ describe("validateCagrForm", () => {
       }).data?.initialValue,
     ).toBe("10000000.5");
   });
+
+  it("localizes validation errors", () => {
+    expect(
+      validateCagrForm({ ...DEFAULT_CAGR_VALUES, initialValue: "" }, "en")
+        .errors.initialValue,
+    ).toBe("Enter the beginning value.");
+  });
 });
