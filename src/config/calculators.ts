@@ -121,4 +121,12 @@ export const publishedCalculators = [
     category: "금융",
     href: "/ko/employment/salary-raise",
   },
+  {
+    id: "overtime-pay",
+    name: "연장근로수당 계산기",
+    description: "통상시급과 연장근로시간으로 예상 시간외수당을 계산합니다.",
+    keywords: ["연장근로수당", "시간외수당", "가산임금", "overtime pay"],
+    category: "금융",
+    href: "/ko/employment/overtime-pay",
+  },
 ] as const satisfies readonly PublishedCalculator[];
