@@ -9,6 +9,19 @@ export type PublishedCalculator = {
 
 export const publishedCalculators = [
   {
+    id: "dsr",
+    name: "DSR 계산기",
+    description: "연소득과 대출 원리금 상환액으로 예상 DSR을 계산합니다.",
+    keywords: [
+      "DSR",
+      "총부채원리금상환비율",
+      "대출 한도",
+      "debt service ratio",
+    ],
+    category: "금융",
+    href: "/ko/finance/dsr",
+  },
+  {
     id: "weekly-holiday-pay",
     name: "주휴수당 계산기",
     description: "시급과 주 소정근로시간으로 예상 주휴수당을 계산합니다.",

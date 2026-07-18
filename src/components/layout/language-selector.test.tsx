@@ -129,6 +129,16 @@ describe("LanguageSelector", () => {
     );
   });
 
+  it("preserves the localized DSR destination", async () => {
+    const user = userEvent.setup();
+    render(<LanguageSelector locale="ko" pathname="/ko/finance/dsr" />);
+    await user.click(screen.getByLabelText("언어 선택"));
+    expect(screen.getByRole("link", { name: "English" })).toHaveAttribute(
+      "href",
+      "/en/finance/dsr",
+    );
+  });
+
   it("preserves the localized severance destination", async () => {
     const user = userEvent.setup();
     render(
