@@ -92,8 +92,15 @@ export const publishedCalculators = [
   {
     id: "social-insurance",
     name: "4대보험 계산기",
-    description: "월 보수로 근로자와 사업주의 예상 4대보험 부담액을 계산합니다.",
-    keywords: ["4대보험", "국민연금", "건강보험", "고용보험", "social insurance"],
+    description:
+      "월 보수로 근로자와 사업주의 예상 4대보험 부담액을 계산합니다.",
+    keywords: [
+      "4대보험",
+      "국민연금",
+      "건강보험",
+      "고용보험",
+      "social insurance",
+    ],
     category: "금융",
     href: "/ko/employment/social-insurance",
   },

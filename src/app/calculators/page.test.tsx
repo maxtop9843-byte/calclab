@@ -60,10 +60,9 @@ describe("calculator directory", () => {
       "href",
       "/ko/employment/hourly-wage",
     );
-    expect(screen.getByRole("link", { name: /4대보험 계산기/ })).toHaveAttribute(
-      "href",
-      "/ko/employment/social-insurance",
-    );
+    expect(
+      screen.getByRole("link", { name: /4대보험 계산기/ }),
+    ).toHaveAttribute("href", "/ko/employment/social-insurance");
 
     const jsonLd = container.querySelector(
       'script[type="application/ld+json"]',
