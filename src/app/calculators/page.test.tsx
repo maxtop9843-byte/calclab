@@ -22,7 +22,11 @@ describe("calculator directory", () => {
       within(screen.getByRole("list", { name: "공개 계산기" })).getAllByRole(
         "listitem",
       ),
-    ).toHaveLength(21);
+    ).toHaveLength(22);
+    expect(screen.getByRole("link", { name: /DSR 계산기/ })).toHaveAttribute(
+      "href",
+      "/ko/finance/dsr",
+    );
     expect(
       screen.getByRole("link", { name: /주휴수당 계산기/ }),
     ).toHaveAttribute("href", "/ko/employment/weekly-holiday-pay");
@@ -98,110 +102,115 @@ describe("calculator directory", () => {
       "@type": "CollectionPage",
       mainEntity: {
         "@type": "ItemList",
-        numberOfItems: 21,
+        numberOfItems: 22,
         itemListElement: [
           {
             position: 1,
+            name: "DSR 계산기",
+            url: "https://www.calcome.com/ko/finance/dsr",
+          },
+          {
+            position: 2,
             name: "주휴수당 계산기",
             url: "https://www.calcome.com/ko/employment/weekly-holiday-pay",
           },
           {
-            position: 2,
+            position: 3,
             name: "CAGR 계산기",
             url: "https://www.calcome.com/ko/finance/cagr",
           },
           {
-            position: 3,
+            position: 4,
             name: "예금 계산기",
             url: "https://www.calcome.com/ko/finance/fixed-deposit",
           },
           {
-            position: 4,
+            position: 5,
             name: "적금 계산기",
             url: "https://www.calcome.com/ko/finance/savings",
           },
           {
-            position: 5,
+            position: 6,
             name: "대출 계산기",
             url: "https://www.calcome.com/ko/finance/loan",
           },
           {
-            position: 6,
+            position: 7,
             name: "복리 계산기",
             url: "https://www.calcome.com/ko/finance/compound-interest",
           },
           {
-            position: 7,
+            position: 8,
             name: "퇴직금 계산기",
             url: "https://www.calcome.com/ko/employment/severance-pay",
           },
           {
-            position: 8,
+            position: 9,
             name: "실업급여 계산기",
             url: "https://www.calcome.com/ko/employment/unemployment-benefits",
           },
           {
-            position: 9,
+            position: 10,
             name: "실수령액 계산기",
             url: "https://www.calcome.com/ko/employment/net-salary",
           },
           {
-            position: 10,
+            position: 11,
             name: "시급 계산기",
             url: "https://www.calcome.com/ko/employment/hourly-wage",
           },
           {
-            position: 11,
+            position: 12,
             name: "4대보험 계산기",
             url: "https://www.calcome.com/ko/employment/social-insurance",
           },
           {
-            position: 12,
+            position: 13,
             name: "평균임금 계산기",
             url: "https://www.calcome.com/ko/employment/average-wage",
           },
           {
-            position: 13,
+            position: 14,
             name: "연봉 인상률 계산기",
             url: "https://www.calcome.com/ko/employment/salary-raise",
           },
           {
-            position: 14,
+            position: 15,
             name: "연봉·월급 환산 계산기",
             url: "https://www.calcome.com/ko/employment/salary-conversion",
           },
           {
-            position: 15,
+            position: 16,
             name: "연장근로수당 계산기",
             url: "https://www.calcome.com/ko/employment/overtime-pay",
           },
           {
-            position: 16,
+            position: 17,
             name: "야간근로수당 계산기",
             url: "https://www.calcome.com/ko/employment/night-work-pay",
           },
           {
-            position: 17,
+            position: 18,
             name: "휴일근로수당 계산기",
             url: "https://www.calcome.com/ko/employment/holiday-work-pay",
           },
           {
-            position: 18,
+            position: 19,
             name: "최저임금 계산기",
             url: "https://www.calcome.com/ko/employment/minimum-wage",
           },
           {
-            position: 19,
+            position: 20,
             name: "연차수당 계산기",
             url: "https://www.calcome.com/ko/employment/annual-leave-allowance",
           },
           {
-            position: 20,
+            position: 21,
             name: "퇴직연금 계산기",
             url: "https://www.calcome.com/ko/employment/retirement-pension",
           },
           {
-            position: 21,
+            position: 22,
             name: "세전 급여 역산 계산기",
             url: "https://www.calcome.com/ko/employment/gross-up-salary",
           },
