@@ -68,7 +68,11 @@ const nextConfig: NextConfig = {
         destination: "/ko/employment/salary-raise",
         permanent: true,
       },
-      { source: "/employment/overtime-pay", destination: "/ko/employment/overtime-pay", permanent: true },
+      {
+        source: "/employment/overtime-pay",
+        destination: "/ko/employment/overtime-pay",
+        permanent: true,
+      },
     ];
   },
 };
