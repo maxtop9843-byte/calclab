@@ -170,4 +170,12 @@ export const publishedCalculators = [
     category: "금융",
     href: "/ko/employment/annual-leave-allowance",
   },
+  {
+    id: "retirement-pension",
+    name: "퇴직연금 계산기",
+    description: "월 적립액과 예상 수익률로 퇴직연금의 미래 가치를 계산합니다.",
+    keywords: ["퇴직연금", "연금", "노후", "retirement pension"],
+    category: "금융",
+    href: "/ko/employment/retirement-pension",
+  },
 ] as const satisfies readonly PublishedCalculator[];

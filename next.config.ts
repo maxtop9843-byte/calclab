@@ -98,6 +98,11 @@ const nextConfig: NextConfig = {
         destination: "/ko/employment/minimum-wage",
         permanent: true,
       },
+      {
+        source: "/employment/retirement-pension",
+        destination: "/ko/employment/retirement-pension",
+        permanent: true,
+      },
     ];
   },
 };
