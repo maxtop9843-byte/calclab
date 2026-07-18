@@ -7,6 +7,7 @@ describe("calculateOvertimePay", () => {
       hourlyWage: new Decimal(12000),
       overtimeHours: new Decimal("10.5"),
       premiumRate: new Decimal(50),
+      workplaceSize: "fiveOrMore",
     });
     expect(r.basePay.toNumber()).toBe(126000);
     expect(r.premiumPay.toNumber()).toBe(63000);

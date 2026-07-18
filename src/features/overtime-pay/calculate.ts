@@ -1,8 +1,10 @@
 import Decimal from "decimal.js";
+export type WorkplaceSize = "fiveOrMore" | "underFive";
 export type OvertimePayInput = {
   hourlyWage: Decimal;
   overtimeHours: Decimal;
   premiumRate: Decimal;
+  workplaceSize: WorkplaceSize;
 };
 export type OvertimePayResult = {
   basePay: Decimal;
@@ -11,6 +13,7 @@ export type OvertimePayResult = {
   effectiveHourlyPay: Decimal;
   overtimeHours: Decimal;
   premiumRate: Decimal;
+  workplaceSize: WorkplaceSize;
 };
 export function calculateOvertimePay(
   input: OvertimePayInput,
@@ -26,5 +29,6 @@ export function calculateOvertimePay(
     ),
     overtimeHours: input.overtimeHours,
     premiumRate: input.premiumRate,
+    workplaceSize: input.workplaceSize,
   };
 }

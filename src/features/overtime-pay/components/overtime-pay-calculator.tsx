@@ -9,7 +9,11 @@ import { Button } from "@/components/ui/button";
 import { AnimatedWon } from "@/features/compound-interest/components/animated-won";
 import { useStableResultScroll } from "@/hooks/use-stable-result-scroll";
 import { formatMoneyInput } from "@/lib/input/money";
-import { calculateOvertimePay, type OvertimePayResult } from "../calculate";
+import {
+  calculateOvertimePay,
+  type OvertimePayResult,
+  type WorkplaceSize,
+} from "../calculate";
 import { overtimePayContent, type OvertimePayLocale } from "../content";
 import { validateOvertimePay, type OvertimePayErrors } from "../validation";
 const fieldClass =
@@ -23,6 +27,8 @@ export function OvertimePayCalculator({
   const [wage, setWage] = useState(""),
     [hours, setHours] = useState(""),
     [rate, setRate] = useState("50");
+  const [workplaceSize, setWorkplaceSize] =
+    useState<WorkplaceSize>("fiveOrMore");
   const [errors, setErrors] = useState<OvertimePayErrors>({});
   const [result, setResult] = useState<OvertimePayResult | null>(null);
   const [animationKey, setAnimationKey] = useState(0);
@@ -35,7 +41,12 @@ export function OvertimePayCalculator({
   function submit(e: FormEvent) {
     e.preventDefault();
     const checked = validateOvertimePay(
-      { hourlyWage: wage, overtimeHours: hours, premiumRate: rate },
+      {
+        hourlyWage: wage,
+        overtimeHours: hours,
+        premiumRate: rate,
+        workplaceSize,
+      },
       locale,
     );
     setErrors(checked.errors);
@@ -49,6 +60,7 @@ export function OvertimePayCalculator({
     setWage("");
     setHours("");
     setRate("50");
+    setWorkplaceSize("fiveOrMore");
     setErrors({});
     setResult(null);
   }
@@ -87,6 +99,30 @@ export function OvertimePayCalculator({
             error={errors.overtimeHours}
             onChange={setHours}
           />
+          <fieldset className="mt-4">
+            <legend className="text-sm font-medium">
+              {copy.workplaceSize}
+            </legend>
+            <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+              {(["fiveOrMore", "underFive"] as const).map((option) => (
+                <label
+                  key={option}
+                  className="flex items-center gap-2 rounded-lg border p-3 text-sm"
+                >
+                  <input
+                    type="radio"
+                    name="workplaceSize"
+                    checked={workplaceSize === option}
+                    onChange={() => {
+                      setWorkplaceSize(option);
+                      setRate(option === "fiveOrMore" ? "50" : "0");
+                    }}
+                  />
+                  {copy[option]}
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <Field
             label={copy.premium}
             value={rate}
@@ -143,6 +179,11 @@ export function OvertimePayCalculator({
               ]}
             />
             <p className="mt-3 text-sm text-muted-foreground">{copy.note}</p>
+            {result?.workplaceSize === "underFive" ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {copy.underFiveNotice}
+              </p>
+            ) : null}
           </section>
           <details open className="rounded-xl border bg-card p-4 shadow-sm">
             <summary className="min-h-10 cursor-pointer content-center font-semibold">
@@ -150,6 +191,10 @@ export function OvertimePayCalculator({
             </summary>
             {result ? (
               <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+                <Detail
+                  label={copy.workplaceSize}
+                  value={copy[result.workplaceSize]}
+                />
                 <Detail
                   label={copy.effective}
                   value={`${result.effectiveHourlyPay.toDecimalPlaces(0).toNumber().toLocaleString()} ${locale === "ko" ? "원" : "KRW"}`}

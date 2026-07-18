@@ -1,9 +1,10 @@
 import Decimal from "decimal.js";
-import type { OvertimePayInput } from "./calculate";
+import type { OvertimePayInput, WorkplaceSize } from "./calculate";
 export type OvertimePayValues = {
   hourlyWage: string;
   overtimeHours: string;
   premiumRate: string;
+  workplaceSize: string;
 };
 export type OvertimePayErrors = Partial<
   Record<keyof OvertimePayValues, string>
@@ -21,6 +22,11 @@ export function validateOvertimePay(
   const wage = values.hourlyWage.trim(),
     hours = values.overtimeHours.trim(),
     rate = values.premiumRate.trim();
+  const workplaceSize: WorkplaceSize | undefined =
+    values.workplaceSize === "fiveOrMore" ||
+    values.workplaceSize === "underFive"
+      ? values.workplaceSize
+      : undefined;
   if (MONEY.test(wage)) hourlyWage = new Decimal(wage.replaceAll(",", ""));
   if (!hourlyWage || hourlyWage.lte(0) || hourlyWage.gt(10_000_000))
     errors.hourlyWage =
@@ -34,15 +40,33 @@ export function validateOvertimePay(
         ? "0보다 크고 168시간 이하로 입력해 주세요."
         : "Enter more than 0 and no more than 168 hours.";
   if (NUMBER.test(rate)) premiumRate = new Decimal(rate);
-  if (!premiumRate || premiumRate.lt(0) || premiumRate.gt(200))
+  if (
+    !premiumRate ||
+    premiumRate.lt(0) ||
+    premiumRate.gt(200) ||
+    (workplaceSize === "fiveOrMore" && premiumRate.lt(50))
+  )
     errors.premiumRate =
       locale === "ko"
-        ? "0~200% 범위로 입력해 주세요."
-        : "Enter a premium from 0% to 200%.";
+        ? workplaceSize === "fiveOrMore"
+          ? "상시 5인 이상 사업장은 50~200% 가산율을 입력해 주세요."
+          : "0~200% 범위로 입력해 주세요."
+        : workplaceSize === "fiveOrMore"
+          ? "Enter a premium from 50% to 200% for workplaces with five or more employees."
+          : "Enter a premium from 0% to 200%.";
+  if (!workplaceSize)
+    errors.workplaceSize =
+      locale === "ko"
+        ? "사업장 규모를 선택해 주세요."
+        : "Choose a workplace size.";
   return Object.keys(errors).length ||
     !hourlyWage ||
     !overtimeHours ||
-    !premiumRate
+    !premiumRate ||
+    !workplaceSize
     ? { errors }
-    : { errors, data: { hourlyWage, overtimeHours, premiumRate } };
+    : {
+        errors,
+        data: { hourlyWage, overtimeHours, premiumRate, workplaceSize },
+      };
 }
