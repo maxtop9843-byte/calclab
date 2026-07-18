@@ -9,7 +9,11 @@ import { Button } from "@/components/ui/button";
 import { AnimatedWon } from "@/features/compound-interest/components/animated-won";
 import { useStableResultScroll } from "@/hooks/use-stable-result-scroll";
 import { formatMoneyInput } from "@/lib/input/money";
-import { calculateNightWorkPay, type NightWorkResult } from "../calculate";
+import {
+  calculateNightWorkPay,
+  type NightWorkResult,
+  type WorkplaceSize,
+} from "../calculate";
 import { content, type Locale } from "../content";
 import { validateNightWorkPay, type Errors } from "../validation";
 const cls =
@@ -19,6 +23,7 @@ export function NightWorkPayCalculator({ locale }: { locale: Locale }) {
   const [w, setW] = useState(""),
     [h, setH] = useState(""),
     [r, setR] = useState("50"),
+    [workplaceSize, setWorkplaceSize] = useState<WorkplaceSize>("fiveOrMore"),
     [errors, setErrors] = useState<Errors>({}),
     [result, setResult] = useState<NightWorkResult | null>(null),
     [key, setKey] = useState(0);
@@ -31,7 +36,7 @@ export function NightWorkPayCalculator({ locale }: { locale: Locale }) {
   function submit(e: FormEvent) {
     e.preventDefault();
     const x = validateNightWorkPay(
-      { hourlyWage: w, nightHours: h, premiumRate: r },
+      { hourlyWage: w, nightHours: h, premiumRate: r, workplaceSize },
       locale,
     );
     setErrors(x.errors);
@@ -45,6 +50,7 @@ export function NightWorkPayCalculator({ locale }: { locale: Locale }) {
     setW("");
     setH("");
     setR("50");
+    setWorkplaceSize("fiveOrMore");
     setErrors({});
     setResult(null);
   }
@@ -73,6 +79,34 @@ export function NightWorkPayCalculator({ locale }: { locale: Locale }) {
             error={errors.hourlyWage}
             change={(v) => setW(formatMoneyInput(v, w))}
           />
+          <fieldset className="mt-4">
+            <legend className="text-sm font-medium">{c.workplaceSize}</legend>
+            <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+              {(["fiveOrMore", "underFive"] as const).map((size) => (
+                <label
+                  key={size}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm"
+                >
+                  <input
+                    type="radio"
+                    name="workplace-size"
+                    value={size}
+                    checked={workplaceSize === size}
+                    onChange={() => {
+                      setWorkplaceSize(size);
+                      setR(size === "fiveOrMore" ? "50" : "0");
+                    }}
+                  />
+                  {c[size]}
+                </label>
+              ))}
+            </div>
+            {errors.workplaceSize ? (
+              <span className="mt-1 block text-sm text-destructive">
+                {errors.workplaceSize}
+              </span>
+            ) : null}
+          </fieldset>
           <Field
             label={c.hours}
             value={h}
@@ -133,17 +167,26 @@ export function NightWorkPayCalculator({ locale }: { locale: Locale }) {
               ]}
             />
             <p className="mt-3 text-sm text-muted-foreground">{c.note}</p>
+            {result ? (
+              <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                <p>{c.overlapNotice}</p>
+                {result.workplaceSize === "underFive" ? (
+                  <p>{c.underFiveNotice}</p>
+                ) : null}
+              </div>
+            ) : null}
           </section>
           <details open className="rounded-xl border bg-card p-4">
             <summary className="font-semibold">{c.details}</summary>
             {result ? (
-              <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+              <dl className="mt-4 grid gap-3 sm:grid-cols-4">
                 <D
                   l={c.adjusted}
                   v={result.adjustedHourlyPay.toDecimalPlaces(0).toString()}
                 />
                 <D l={c.appliedHours} v={result.nightHours.toString()} />
                 <D l={c.appliedRate} v={`${result.premiumRate}%`} />
+                <D l={c.workplaceSize} v={c[result.workplaceSize]} />
               </dl>
             ) : (
               <p className="mt-3 text-sm text-muted-foreground">{c.empty}</p>

@@ -5,25 +5,31 @@ import {
 } from "@/lib/seo/structured-data";
 import { content, type Locale } from "../content";
 import { NightWorkPayCalculator } from "./calculator";
+
 export function LocalizedNightWorkPayPage({ locale }: { locale: Locale }) {
-  const c = content[locale],
-    path = `/${locale}/employment/night-work-pay`;
+  const c = content[locale];
+  const path = `/${locale}/employment/night-work-pay`;
+  const home = locale === "ko" ? "홈" : "Home";
+  const calculators = locale === "ko" ? "계산기" : "Calculators";
   const data = createPageStructuredData({
     name: c.title,
     description: c.description,
     path,
     locale,
     breadcrumbs: [
-      { name: locale === "ko" ? "홈" : "Home", path: "/" },
+      { name: home, path: "/" },
+      { name: calculators, path: "/calculators" },
       { name: c.title, path },
     ],
   });
+
   return (
     <main id="main-content" className="flex-1">
       <JsonLdScript data={data} />
       <div className="mx-auto w-full max-w-[1440px] px-5 py-8 sm:px-6">
         <nav className="text-sm text-muted-foreground">
-          <Link href="/">{locale === "ko" ? "홈" : "Home"}</Link> / {c.title}
+          <Link href="/">{home}</Link> /{" "}
+          <Link href="/calculators">{calculators}</Link> / {c.title}
         </nav>
         <header className="mt-5 max-w-3xl">
           <p className="text-sm font-semibold text-primary">{c.category}</p>
@@ -59,6 +65,7 @@ export function LocalizedNightWorkPayPage({ locale }: { locale: Locale }) {
     </main>
   );
 }
+
 function Info({ t, a }: { t: string; a: readonly string[] }) {
   return (
     <section className="rounded-xl border bg-card p-5">
