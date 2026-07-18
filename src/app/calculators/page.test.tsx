@@ -22,7 +22,7 @@ describe("calculator directory", () => {
       within(screen.getByRole("list", { name: "공개 계산기" })).getAllByRole(
         "listitem",
       ),
-    ).toHaveLength(19);
+    ).toHaveLength(20);
     expect(
       screen.getByRole("link", { name: /주휴수당 계산기/ }),
     ).toHaveAttribute("href", "/ko/employment/weekly-holiday-pay");
@@ -84,6 +84,9 @@ describe("calculator directory", () => {
     expect(
       screen.getByRole("link", { name: /연차수당 계산기/ }),
     ).toHaveAttribute("href", "/ko/employment/annual-leave-allowance");
+    expect(
+      screen.getByRole("link", { name: /퇴직연금 계산기/ }),
+    ).toHaveAttribute("href", "/ko/employment/retirement-pension");
 
     const jsonLd = container.querySelector(
       'script[type="application/ld+json"]',
@@ -92,7 +95,7 @@ describe("calculator directory", () => {
       "@type": "CollectionPage",
       mainEntity: {
         "@type": "ItemList",
-        numberOfItems: 19,
+        numberOfItems: 20,
         itemListElement: [
           {
             position: 1,
@@ -188,6 +191,11 @@ describe("calculator directory", () => {
             position: 19,
             name: "연차수당 계산기",
             url: "https://www.calcome.com/ko/employment/annual-leave-allowance",
+          },
+          {
+            position: 20,
+            name: "퇴직연금 계산기",
+            url: "https://www.calcome.com/ko/employment/retirement-pension",
           },
         ],
       },
